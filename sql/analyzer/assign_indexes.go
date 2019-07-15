@@ -3,10 +3,10 @@ package analyzer
 import (
 	"reflect"
 
-	errors "gopkg.in/src-d/go-errors.v1"
 	"github.com/src-d/go-mysql-server/sql"
 	"github.com/src-d/go-mysql-server/sql/expression"
 	"github.com/src-d/go-mysql-server/sql/plan"
+	"gopkg.in/src-d/go-errors.v1"
 )
 
 var errInvalidInRightEvaluation = errors.NewKind("expecting evaluation of IN expression right hand side to be a tuple, but it is %T")
@@ -287,25 +287,27 @@ func getIndexes(e sql.Expression, aliases map[string]sql.Expression, a *Analyzer
 	return result, nil
 }
 
-func unifyExpressions(aliases map[string]sql.Expression, expr ...sql.Expression) []sql.Expression {
-	expressions := make([]sql.Expression, len(expr))
-
-	for i, e := range expr {
-		uex := e
-		name := e.String()
-		if n, ok := e.(sql.Nameable); ok {
-			name = n.Name()
-		}
-
-		if aliases != nil && len(aliases) > 0 {
-			if alias, ok := aliases[name]; ok {
-				uex = alias
-			}
-		}
-
-		expressions[i] = uex
+func unifyExpression(aliases map[string]sql.Expression, e sql.Expression) sql.Expression {
+	uex := e
+	name := e.String()
+	if n, ok := e.(sql.Nameable); ok {
+		name = n.Name()
 	}
 
+	if aliases != nil && len(aliases) > 0 {
+		if alias, ok := aliases[name]; ok {
+			uex = alias
+		}
+	}
+
+	return uex
+}
+
+func unifyExpressions(aliases map[string]sql.Expression, expr ...sql.Expression) []sql.Expression {
+	expressions := make([]sql.Expression, len(expr))
+	for i, e := range expr {
+		expressions[i] = unifyExpression(aliases, e)
+	}
 	return expressions
 }
 
